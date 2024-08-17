@@ -10,6 +10,11 @@
 #include<string.h>
 #include<stdbool.h>
 
-void professor_receber_atividade();
+#ifndef _PROFESSOR_H_
+#define _PROFESSOR_H_
 
-void professor_finalizar_entrega_atividades();
+void professor_receber_atividade(sem_t *professor, int *n_entregas);
+
+void professor_finalizar_entrega_atividades(sem_t *sala);
+
+#endif

@@ -8,24 +8,34 @@
 #include <stdio.h>
 #include <stdlib.h> // atoi
 #include <string.h>
-#include <stdbool.h> // bool
-#include <pthread.h>
+#include <stdbool.h>   // bool
+#include <pthread.h>   /* POSIX Threads */
+#include <semaphore.h> /* Semaphore */
 
 #include "aluno.h"
 #include "professor.h"
 
 #define DEBUG false
 
+// Variáveis de controle
+
+int vagas_sala = 0;
+int n_entregas = 0; // variável que controla quantas atividades foram entregues
+int n_alunos = 0;
+
+sem_t sala;      // Variável que controla se um grupo pode entrar na sala
+sem_t professor; // Semáforo que controla se o professor pode, ou não, receber tarefas
+
+sem_t vagas_aluno_at1; // Semáforo que controla número de alunos que quer entregar a atividade 1
+sem_t vagas_aluno_at2; // Semáforo que controla número de alunos que quer entregar a atividade 2
+
+// -----------
+
 Aluno **monta_alunos(int n_alunos);
 
-/**
- * Destrói os chunks criados
- *
- * @param chunks: chunks a serem destruídos
- */
-void destroi_chunks(Aluno **chunks);
+void destroi_alunos(Aluno **chunks, int n_alunos);
 
-void cria_threads(pthread_t *threads, Aluno **alunos, int n_alunos);
+void cria_threads(pthread_t *threads, Aluno **alunos);
 
 void *acao_aluno(void *param);
 
@@ -39,15 +49,23 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    int n_alunos = atoi(argv[1]);
+    n_alunos = atoi(argv[1]);
 
+    /* Inicializa alguns semáforos */
     Aluno **alunos = monta_alunos(n_alunos);
+    sem_init(&sala, 0, 1);      // A sala está inicialmente aberta
+    sem_init(&professor, 0, 0); // O professor está no aguardo da primeira tarefa
+    // --
 
     /* Declara as threads */
     int n_threads = n_alunos + 1; // +1 para o professor
 
     pthread_t threads[n_threads];
-    cria_threads(threads, alunos, n_alunos);
+    cria_threads(threads, alunos);
+
+    /* Inicia os semáforos */
+    sem_init(&sala, 0, 1);
+    sem_init(&n_entregas, 0, 0);
 
     /* Aguarda as threads terminarem */
     for (int i = 0; i < n_threads; i++)
@@ -69,30 +87,43 @@ void *acao_aluno(void *param)
 
     aluno_terminar_atividade(aluno);
 
-    aluno_aguardar_entrega(aluno);
+    while (true)
+    {
+        aluno_aguardar_entrega(aluno, &vagas_aluno_at1, &vagas_aluno_at2, &vagas_sala);
 
-    aluno_entrar_sala(aluno);
+        aluno_entrar_sala(aluno, &sala, &vagas_sala);
 
-    aluno_entregar_atividade(aluno);
+        aluno_entregar_atividade(aluno, &professor, &vagas_aluno_at1, &vagas_aluno_at2);
 
-    aluno_sair_sala(aluno);
+        aluno_sair_sala(aluno, &sala, &vagas_sala);
+
+        break;
+    }
 
     return NULL;
 }
 
-void *acao_professor(void *param) {
+void *acao_professor(void *param)
+{
+    while (true)
+    {
+        if (n_entregas == n_alunos)
+            break;
 
-    
+        professor_receber_atividade(&professor, &n_entregas);
+    }
+
+    professor_finalizar_entrega_atividades(&sala);
 
     return NULL;
 }
 
 Aluno **monta_alunos(int n_alunos)
 {
-    Aluno **chunks = (Aluno **)calloc(n_alunos, sizeof(Aluno *));
+    Aluno **alunos = (Aluno **)calloc(n_alunos, sizeof(Aluno *));
 
-    int n_atividade01 = n_alunos / 3;             // 1/3 Atividade 01
-    int n_atividade02 = n_alunos - n_atividade01; // 2/3 Atividade 02
+    int n_atividade02 = n_alunos / 3;             // 1/3 Atividade 01
+    int n_atividade01 = n_alunos - n_atividade02; // 2/3 Atividade 02
 
     printf("Quantidade de alunos: %d\n", n_alunos);
     printf("Quantidade de atividade 01: %d\n", n_atividade01);
@@ -103,9 +134,23 @@ Aluno **monta_alunos(int n_alunos)
     {
         Aluno *aluno = cria_aluno(i, atividades <= n_atividade01 ? 1 : 2);
     }
+
+    sem_init(&vagas_aluno_at1, 0, n_atividade01);
+    sem_init(&vagas_aluno_at2, 0, n_atividade02);
+
+    return alunos;
 }
 
-void cria_threads(pthread_t *threads, Aluno **alunos, int n_alunos)
+void destroi_alunos(Aluno **alunos, int n_alunos)
+{
+    for (int i = 0; i < n_alunos; i++)
+    {
+        free(alunos[i]);
+    }
+    free(alunos);
+}
+
+void cria_threads(pthread_t *threads, Aluno **alunos)
 {
     int i;
     for (i = 0; i < n_alunos; i++)
@@ -116,7 +161,7 @@ void cria_threads(pthread_t *threads, Aluno **alunos, int n_alunos)
 #endif
     }
 
-    pthread_create(&threads[i], NULL, (void *)professor_faz_algo);
+    pthread_create(&threads[i], NULL, (void *)acao_professor, (void *)NULL);
 #if DEBUG
     printf("Criou thread professor%d\n", i);
 #endif

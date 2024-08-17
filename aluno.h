@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <semaphore.h> /* Semaphore */
 
 typedef struct aluno Aluno;
 
@@ -21,12 +22,12 @@ void aluno_fazer_atividade(Aluno *aluno);
 
 void aluno_terminar_atividade(Aluno *aluno);
 
-void aluno_aguardar_entrega(Aluno *aluno);
+void aluno_aguardar_entrega(Aluno *aluno, sem_t *vagas_aluno_atv1, sem_t *vagas_aluno_atv2, int *vagas_sala);
 
-void aluno_entrar_sala(Aluno *aluno);
+void aluno_entrar_sala(Aluno *aluno, sem_t *sala, int *vagas_sala);
 
-void aluno_entregar_atividade(Aluno *aluno);
+void aluno_entregar_atividade(Aluno *aluno, sem_t* professor, sem_t *vagas_aluno_atv1, sem_t *vagas_aluno_atv2);
 
-void aluno_sair_sala(Aluno *aluno);
+void aluno_sair_sala(Aluno *aluno, sem_t *sala, int *vagas_sala);
 
 #endif
