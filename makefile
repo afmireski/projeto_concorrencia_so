@@ -23,4 +23,4 @@ DEPS = aluno.h professor.h
 build: aluno.o professor.o
 
 clean: 
-	rm *.o test_matriz $(PROGS)
+	rm *.o $(PROGS)

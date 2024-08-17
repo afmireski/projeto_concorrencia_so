@@ -16,7 +16,7 @@ void professor_receber_atividade(sem_t *professor, int *n_entregas)
 {
     sem_wait(professor); // Aguarda um aluno chegar para entregar uma tarefa
 
-    printf("Professor recebeu atividade");
+    printf("Professor recebeu atividade\n");
 
     *n_entregas += 1;
 
@@ -25,7 +25,7 @@ void professor_receber_atividade(sem_t *professor, int *n_entregas)
 
 void professor_finalizar_entrega_atividades(sem_t *sala)
 {
-    printf("Professor recebeu todas as atividades");
+    printf("Professor recebeu todas as atividades\n");
 
     sem_wait(sala); // Aguarda todos os alunos saírem da sala antes de fechá-la
 }

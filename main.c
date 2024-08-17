@@ -16,22 +16,22 @@
 #include "professor.h"
 
 #define DEBUG false
+#define VAGAS_SALA 3
 
 // Variáveis de controle
 
-int vagas_sala = 0;
+int vagas_sala = VAGAS_SALA;
 int n_entregas = 0; // variável que controla quantas atividades foram entregues
 int n_alunos = 0;
 
-sem_t sala;      // Variável que controla se um grupo pode entrar na sala
-sem_t professor; // Semáforo que controla se o professor pode, ou não, receber tarefas
-
+sem_t sala;            // Variável que controla se um grupo pode entrar na sala
+sem_t professor;       // Semáforo que controla se o professor pode, ou não, receber tarefas
 sem_t vagas_aluno_at1; // Semáforo que controla número de alunos que quer entregar a atividade 1
 sem_t vagas_aluno_at2; // Semáforo que controla número de alunos que quer entregar a atividade 2
 
 // -----------
 
-Aluno **monta_alunos(int n_alunos);
+Aluno **monta_alunos();
 
 void destroi_alunos(Aluno **chunks, int n_alunos);
 
@@ -52,7 +52,7 @@ int main(int argc, char const *argv[])
     n_alunos = atoi(argv[1]);
 
     /* Inicializa alguns semáforos */
-    Aluno **alunos = monta_alunos(n_alunos);
+    Aluno **alunos = monta_alunos();
     sem_init(&sala, 0, 1);      // A sala está inicialmente aberta
     sem_init(&professor, 0, 0); // O professor está no aguardo da primeira tarefa
     // --
@@ -63,9 +63,9 @@ int main(int argc, char const *argv[])
     pthread_t threads[n_threads];
     cria_threads(threads, alunos);
 
-    /* Inicia os semáforos */
-    sem_init(&sala, 0, 1);
-    sem_init(&n_entregas, 0, 0);
+#if DEBUG
+    printf("...\n");
+#endif
 
     /* Aguarda as threads terminarem */
     for (int i = 0; i < n_threads; i++)
@@ -75,6 +75,12 @@ int main(int argc, char const *argv[])
         printf("Thread %d terminou\n", i);
 #endif
     }
+
+    destroi_alunos(alunos, n_alunos);
+    sem_destroy(&sala);
+    sem_destroy(&professor);
+    sem_destroy(&vagas_aluno_at1);
+    sem_destroy(&vagas_aluno_at2);
 
     return 0;
 }
@@ -89,7 +95,8 @@ void *acao_aluno(void *param)
 
     while (true)
     {
-        aluno_aguardar_entrega(aluno, &vagas_aluno_at1, &vagas_aluno_at2, &vagas_sala);
+
+        aluno_aguardar_entrega(aluno, &vagas_aluno_at1, &vagas_aluno_at2);
 
         aluno_entrar_sala(aluno, &sala, &vagas_sala);
 
@@ -111,6 +118,7 @@ void *acao_professor(void *param)
             break;
 
         professor_receber_atividade(&professor, &n_entregas);
+        printf("professor recebeu %d de %d atividades\n", n_entregas, n_alunos);
     }
 
     professor_finalizar_entrega_atividades(&sala);
@@ -118,12 +126,12 @@ void *acao_professor(void *param)
     return NULL;
 }
 
-Aluno **monta_alunos(int n_alunos)
+Aluno **monta_alunos()
 {
     Aluno **alunos = (Aluno **)calloc(n_alunos, sizeof(Aluno *));
 
-    int n_atividade02 = n_alunos / 3;             // 1/3 Atividade 01
-    int n_atividade01 = n_alunos - n_atividade02; // 2/3 Atividade 02
+    int n_atividade02 = n_alunos / 3;             // 1/3 Atividade 02
+    int n_atividade01 = n_alunos - n_atividade02; // 2/3 Atividade 01
 
     printf("Quantidade de alunos: %d\n", n_alunos);
     printf("Quantidade de atividade 01: %d\n", n_atividade01);
@@ -133,10 +141,15 @@ Aluno **monta_alunos(int n_alunos)
     for (int i = 0; i < n_alunos; i++, atividades++)
     {
         Aluno *aluno = cria_aluno(i, atividades <= n_atividade01 ? 1 : 2);
+        alunos[i] = aluno;
     }
 
     sem_init(&vagas_aluno_at1, 0, n_atividade01);
     sem_init(&vagas_aluno_at2, 0, n_atividade02);
+
+#if DEBUG
+    printf("Montou alunos\n");
+#endif
 
     return alunos;
 }
