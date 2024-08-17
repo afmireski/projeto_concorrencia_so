@@ -16,12 +16,6 @@
 
 #define DEBUG false
 
-typedef struct aluno {
-    unsigned int id;
-    unsigned int tipo_atividade;
-} Aluno;
-
-
 Aluno **monta_alunos(int n_alunos);
 
 /**
@@ -32,6 +26,10 @@ Aluno **monta_alunos(int n_alunos);
 void destroi_chunks(Aluno **chunks);
 
 void cria_threads(pthread_t *threads, Aluno **alunos, int n_alunos);
+
+void *acao_aluno(void *param);
+
+void *acao_professor(void *param);
 
 int main(int argc, char const *argv[])
 {
@@ -51,7 +49,42 @@ int main(int argc, char const *argv[])
     pthread_t threads[n_threads];
     cria_threads(threads, alunos, n_alunos);
 
+    /* Aguarda as threads terminarem */
+    for (int i = 0; i < n_threads; i++)
+    {
+        pthread_join(threads[i], NULL);
+#if DEBUG
+        printf("Thread %d terminou\n", i);
+#endif
+    }
+
     return 0;
+}
+
+void *acao_aluno(void *param)
+{
+    Aluno *aluno = (Aluno *)param;
+
+    aluno_fazer_atividade(aluno);
+
+    aluno_terminar_atividade(aluno);
+
+    aluno_aguardar_entrega(aluno);
+
+    aluno_entrar_sala(aluno);
+
+    aluno_entregar_atividade(aluno);
+
+    aluno_sair_sala(aluno);
+
+    return NULL;
+}
+
+void *acao_professor(void *param) {
+
+    
+
+    return NULL;
 }
 
 Aluno **monta_alunos(int n_alunos)
@@ -68,9 +101,7 @@ Aluno **monta_alunos(int n_alunos)
     int atividades = 1;
     for (int i = 0; i < n_alunos; i++, atividades++)
     {
-        Aluno *aluno = (Aluno *)malloc(sizeof(Aluno));
-        aluno->id = i;
-        aluno->tipo_atividade = atividades <= n_atividade01 ? 1 : 2;
+        Aluno *aluno = cria_aluno(i, atividades <= n_atividade01 ? 1 : 2);
     }
 }
 
@@ -79,7 +110,7 @@ void cria_threads(pthread_t *threads, Aluno **alunos, int n_alunos)
     int i;
     for (i = 0; i < n_alunos; i++)
     {
-        pthread_create(&threads[i], NULL, (void *)aluno_faz_algo, alunos[i]);
+        pthread_create(&threads[i], NULL, (void *)acao_aluno, alunos[i]);
 #if DEBUG
         printf("Criou thread aluno %d\n", i);
 #endif

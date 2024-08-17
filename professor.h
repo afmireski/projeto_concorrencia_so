@@ -10,6 +10,6 @@
 #include<string.h>
 #include<stdbool.h>
 
-void receberAtividade();
+void professor_receber_atividade();
 
-void finalizarEntregaAtividades();
+void professor_finalizar_entrega_atividades();
