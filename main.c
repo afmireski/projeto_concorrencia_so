@@ -144,8 +144,11 @@ Aluno **monta_alunos()
         alunos[i] = aluno;
     }
 
-    sem_init(&vagas_aluno_at1, 0, n_atividade01);
-    sem_init(&vagas_aluno_at2, 0, n_atividade02);
+    int vagas_atv2 = VAGAS_SALA / 3;
+    int vagas_atv1 = VAGAS_SALA - vagas_atv1;
+
+    sem_init(&vagas_aluno_at1, 0, vagas_atv1);
+    sem_init(&vagas_aluno_at2, 0, vagas_atv2);
 
 #if DEBUG
     printf("Montou alunos\n");
