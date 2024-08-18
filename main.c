@@ -20,11 +20,13 @@
 
 // Variáveis de controle
 
-int vagas_sala = VAGAS_SALA;
+int vagas_grupo = VAGAS_SALA;
 int n_entregas = 0; // variável que controla quantas atividades foram entregues
 int n_alunos = 0;
 
-sem_t sala;            // Variável que controla se um grupo pode entrar na sala
+sem_t entrar_grupo;    // Mutex que controla se um aluno pode entrar no grupo
+sem_t grupo_formado;   // Mutex que controla se o grupo foi formado
+sem_t sair_grupo;      // Mutex que controla se um aluno pode sair do grupo
 sem_t professor;       // Semáforo que controla se o professor pode, ou não, receber tarefas
 sem_t vagas_aluno_at1; // Semáforo que controla número de alunos que quer entregar a atividade 1
 sem_t vagas_aluno_at2; // Semáforo que controla número de alunos que quer entregar a atividade 2
@@ -53,8 +55,10 @@ int main(int argc, char const *argv[])
 
     /* Inicializa alguns semáforos */
     Aluno **alunos = monta_alunos();
-    sem_init(&sala, 0, 1);      // A sala está inicialmente aberta
-    sem_init(&professor, 0, 0); // O professor está no aguardo da primeira tarefa
+    sem_init(&entrar_grupo, 0, 1);  // Inicialmente, qualquer um pode entrar no grupo
+    sem_init(&grupo_formado, 0, 0); // Inicialmente, o grupo não está formado
+    sem_init(&sair_grupo, 0, 1);    // Inicialmente, qualquer um pode sair do grupo
+    sem_init(&professor, 0, 0);     // O professor está no aguardo da primeira tarefa
     // --
 
     /* Declara as threads */
@@ -77,7 +81,9 @@ int main(int argc, char const *argv[])
     }
 
     destroi_alunos(alunos, n_alunos);
-    sem_destroy(&sala);
+    sem_destroy(&entrar_grupo);
+    sem_destroy(&grupo_formado);
+    sem_destroy(&sair_grupo);
     sem_destroy(&professor);
     sem_destroy(&vagas_aluno_at1);
     sem_destroy(&vagas_aluno_at2);
@@ -98,11 +104,11 @@ void *acao_aluno(void *param)
 
         aluno_aguardar_entrega(aluno, &vagas_aluno_at1, &vagas_aluno_at2);
 
-        aluno_entrar_sala(aluno, &sala, &vagas_sala);
+        aluno_entrar_sala(aluno, &entrar_grupo, &grupo_formado, &vagas_grupo);
 
         aluno_entregar_atividade(aluno, &professor, &vagas_aluno_at1, &vagas_aluno_at2);
 
-        aluno_sair_sala(aluno, &sala, &vagas_sala);
+        aluno_sair_sala(aluno, &sair_grupo, &entrar_grupo, &grupo_formado, &vagas_grupo);
 
         break;
     }
@@ -121,7 +127,7 @@ void *acao_professor(void *param)
         printf("professor recebeu %d de %d atividades\n", n_entregas, n_alunos);
     }
 
-    professor_finalizar_entrega_atividades(&sala);
+    professor_finalizar_entrega_atividades();
 
     return NULL;
 }
@@ -144,8 +150,8 @@ Aluno **monta_alunos()
         alunos[i] = aluno;
     }
 
-    int vagas_atv2 = VAGAS_SALA / 3;
-    int vagas_atv1 = VAGAS_SALA - vagas_atv1;
+    int vagas_atv1 = 2;
+    int vagas_atv2 = 1;
 
     sem_init(&vagas_aluno_at1, 0, vagas_atv1);
     sem_init(&vagas_aluno_at2, 0, vagas_atv2);

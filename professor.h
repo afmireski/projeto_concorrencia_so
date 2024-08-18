@@ -15,6 +15,6 @@
 
 void professor_receber_atividade(sem_t *professor, int *n_entregas);
 
-void professor_finalizar_entrega_atividades(sem_t *sala);
+void professor_finalizar_entrega_atividades();
 
 #endif
