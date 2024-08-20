@@ -76,13 +76,34 @@ void aluno_entrar_sala(Aluno *aluno, sem_t *entrar_grupo, sem_t* grupo_formado, 
     #endif
 }
 
-void aluno_entregar_atividade(Aluno *aluno, sem_t* professor, sem_t *vagas_aluno_atv1, sem_t *vagas_aluno_atv2)
+void aluno_entregar_atividade(Aluno *aluno, sem_t* professor)
 {    
     sem_post(professor); // Avisa o professor que tem atividade para receber
     #if DEBUG
             printf("Professor recebendo...\n");
     #endif
-    printf("alunoSO_%d_AT%d entrega atividade %d\n", aluno->id, aluno->tipo_atividade, aluno->tipo_atividade);
+    printf("alunoSO_%d_AT%d entrega atividade %d\n", aluno->id, aluno->tipo_atividade, aluno->tipo_atividade);    
+}
+
+void aluno_sair_sala(Aluno *aluno, sem_t *sair_grupo, sem_t *entrar_grupo, sem_t* grupo_formado, int *vagas_grupo, sem_t *vagas_aluno_atv1, sem_t *vagas_aluno_atv2, sem_t* grupo_desformado)
+{
+    sem_wait(sair_grupo); // Aguarda sua vez de entrar no grupo
+
+    printf("alunoSO_%d_AT%d saiu da sala\n", aluno->id, aluno->tipo_atividade);
+    *vagas_grupo += 1;
+    if (*vagas_grupo == 3){
+        sem_post(grupo_desformado); // Desforma o grupo
+        sem_post(grupo_desformado);
+        sem_post(grupo_desformado);
+        sem_post(grupo_formado); // Libera para próximo aluno formar grupo
+        sem_post(entrar_grupo); // Libera para o próximo na fila entrar num novo grupo
+    }
+
+    printf("Alunos que saíram da sala: %d\n", *vagas_grupo);
+
+    sem_post(sair_grupo); // Deixa o próximo entrar no grupo
+
+    sem_wait(grupo_desformado);
 
     if (aluno->tipo_atividade == 1)
     {
@@ -92,21 +113,4 @@ void aluno_entregar_atividade(Aluno *aluno, sem_t* professor, sem_t *vagas_aluno
     {
         sem_post(vagas_aluno_atv2); // Libera vaga no grupo da  atividade 02
     }
-}
-
-void aluno_sair_sala(Aluno *aluno, sem_t *sair_grupo, sem_t *entrar_grupo, sem_t* grupo_formado, int *vagas_grupo)
-{
-    sem_wait(sair_grupo); // Aguarda sua vez de entrar no grupo
-
-    printf("alunoSO_%d_AT%d saiu da sala\n", aluno->id, aluno->tipo_atividade);
-    *vagas_grupo += 1;
-    if (*vagas_grupo == 3){
-        sem_post(grupo_formado); // Desforma o grupo
-        sem_post(entrar_grupo); // Libera para o próximo na fila entrar no grupo
-    }
-
-    printf("Vagas restantes na sala: %d\n", *vagas_grupo);
-
-    sem_post(sair_grupo); // Deixa o próximo entrar no grupo
-
 }

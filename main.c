@@ -26,6 +26,7 @@ int n_alunos = 0;
 
 sem_t entrar_grupo;    // Mutex que controla se um aluno pode entrar no grupo
 sem_t grupo_formado;   // Mutex que controla se o grupo foi formado
+sem_t grupo_desformado;   // Mutex que controla se o grupo foi desformado
 sem_t sair_grupo;      // Mutex que controla se um aluno pode sair do grupo
 sem_t professor;       // Semáforo que controla se o professor pode, ou não, receber tarefas
 sem_t vagas_aluno_at1; // Semáforo que controla número de alunos que quer entregar a atividade 1
@@ -57,6 +58,7 @@ int main(int argc, char const *argv[])
     Aluno **alunos = monta_alunos();
     sem_init(&entrar_grupo, 0, 1);  // Inicialmente, qualquer um pode entrar no grupo
     sem_init(&grupo_formado, 0, 0); // Inicialmente, o grupo não está formado
+    sem_init(&grupo_desformado, 0, 0); // Inicialmente, o grupo não está formado
     sem_init(&sair_grupo, 0, 1);    // Inicialmente, qualquer um pode sair do grupo
     sem_init(&professor, 0, 0);     // O professor está no aguardo da primeira tarefa
     // --
@@ -83,6 +85,7 @@ int main(int argc, char const *argv[])
     destroi_alunos(alunos, n_alunos);
     sem_destroy(&entrar_grupo);
     sem_destroy(&grupo_formado);
+    sem_destroy(&grupo_desformado);
     sem_destroy(&sair_grupo);
     sem_destroy(&professor);
     sem_destroy(&vagas_aluno_at1);
@@ -106,9 +109,9 @@ void *acao_aluno(void *param)
 
         aluno_entrar_sala(aluno, &entrar_grupo, &grupo_formado, &vagas_grupo);
 
-        aluno_entregar_atividade(aluno, &professor, &vagas_aluno_at1, &vagas_aluno_at2);
+        aluno_entregar_atividade(aluno, &professor);
 
-        aluno_sair_sala(aluno, &sair_grupo, &entrar_grupo, &grupo_formado, &vagas_grupo);
+        aluno_sair_sala(aluno, &sair_grupo, &entrar_grupo, &grupo_formado, &vagas_grupo, &vagas_aluno_at1, &vagas_aluno_at2, &grupo_desformado);
 
         break;
     }

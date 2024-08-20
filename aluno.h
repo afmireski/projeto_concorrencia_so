@@ -27,8 +27,8 @@ void aluno_aguardar_entrega(Aluno *aluno, sem_t *vagas_aluno_atv1, sem_t *vagas_
 
 void aluno_entrar_sala(Aluno *aluno, sem_t *entrar_grupo, sem_t* grupo_formado, int *vagas_grupo);
 
-void aluno_entregar_atividade(Aluno *aluno, sem_t* professor, sem_t *vagas_aluno_atv1, sem_t *vagas_aluno_atv2);
+void aluno_entregar_atividade(Aluno *aluno, sem_t* professor);
 
-void aluno_sair_sala(Aluno *aluno, sem_t *sair_grupo, sem_t *entrar_grupo, sem_t* grupo_formado, int *vagas_grupo);
+void aluno_sair_sala(Aluno *aluno, sem_t *sair_grupo, sem_t *entrar_grupo, sem_t* grupo_formado, int *vagas_grupo, sem_t *vagas_aluno_atv1, sem_t *vagas_aluno_atv2, sem_t* grupo_desformado);
 
 #endif
