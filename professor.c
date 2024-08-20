@@ -12,16 +12,16 @@
 #include <semaphore.h> /* Semaphore */
 #include "professor.h"
 
-void professor_receber_atividade(sem_t *professor, int *n_entregas)
-{
-    sem_wait(professor); // Aguarda um aluno chegar para entregar uma tarefa
-
+void professor_receber_atividade(sem_t *professor, int *n_entregas) {
+    
+    // Espera uma entrega
+    sem_wait(professor); 
     printf("Professor recebeu atividade\n");
 
-    *n_entregas += 1;
-
-    // Volta a esperar por uma entrega
+    // Incrementa o número de entregas
+    (*n_entregas)++;
 }
+
 
 void professor_finalizar_entrega_atividades(sem_t *sala)
 {

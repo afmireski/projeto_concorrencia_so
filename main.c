@@ -25,8 +25,6 @@ int n_alunos = 0;
 
 sem_t sala;            // Variável que controla se um grupo pode entrar na sala
 sem_t professor;       // Semáforo que controla se o professor pode, ou não, receber tarefas
-sem_t vagas_aluno_at1; // Semáforo que controla número de alunos que querem entregar a atividade 1
-sem_t vagas_aluno_at2; // Semáforo que controla número de alunos que querem entregar a atividade 2
 
 // Funções declaradas
 Aluno **monta_alunos();
@@ -46,43 +44,20 @@ int main(int argc, char const *argv[])
     n_alunos = atoi(argv[1]);
 
     // Inicializa os semáforos
-    sem_init(&sala, 0, 1);      // A sala está inicialmente aberta
-    sem_init(&professor, 0, 0); // O professor está no aguardo da primeira tarefa
+    iniciar_sistema(VAGAS_SALA);
 
-    // Calcula o número de vagas para cada tipo de atividade
-    int vagas_atv2 = VAGAS_SALA / 3;
-    int vagas_atv1 = VAGAS_SALA - vagas_atv2;
-
-    sem_init(&vagas_aluno_at1, 0, vagas_atv1);
-    sem_init(&vagas_aluno_at2, 0, vagas_atv2);
-
-    // Cria e inicializa os alunos
     Aluno **alunos = monta_alunos();
-
-    // Cria as threads
-    int n_threads = n_alunos + 1; // +1 para o professor
+    int n_threads = n_alunos + 1;
     pthread_t threads[n_threads];
     cria_threads(threads, alunos);
 
-#if DEBUG
-    printf("...\n");
-#endif
-
-    // Aguarda as threads terminarem
     for (int i = 0; i < n_threads; i++)
     {
         pthread_join(threads[i], NULL);
-#if DEBUG
-        printf("Thread %d terminou\n", i);
-#endif
     }
 
-    // Destroi os alunos e semáforos
     destroi_alunos(alunos, n_alunos);
-    sem_destroy(&sala);
-    sem_destroy(&professor);
-    sem_destroy(&vagas_aluno_at1);
-    sem_destroy(&vagas_aluno_at2);
+    finalizar_sistema();
 
     return 0;
 }
@@ -94,32 +69,21 @@ void *acao_aluno(void *param)
     aluno_fazer_atividade(aluno);
     aluno_terminar_atividade(aluno);
 
-    while (true)
-    {
-        aluno_aguardar_entrega(aluno, &vagas_aluno_at1, &vagas_aluno_at2);
-        aluno_entrar_sala(aluno, &sala, &vagas_sala);
-        aluno_entregar_atividade(aluno, &professor, &vagas_aluno_at1, &vagas_aluno_at2);
-        aluno_sair_sala(aluno, &sala, &vagas_sala);
-
-        break;
-    }
+    aluno_aguardar_entrega(aluno);
+    aluno_entrar_sala(aluno);
+    aluno_entregar_atividade(aluno);
+    aluno_sair_sala(aluno);
 
     return NULL;
 }
 
-void *acao_professor(void *param)
-{
-    while (true)
-    {
-        if (n_entregas >= n_alunos)
-            break;
-
+void *acao_professor(void *param) {
+    while (n_entregas < n_alunos) {
         professor_receber_atividade(&professor, &n_entregas);
         printf("Professor recebeu %d de %d atividades\n", n_entregas, n_alunos);
     }
 
-    professor_finalizar_entrega_atividades(&sala);
-
+    professor_finalizar_entrega_atividades(NULL);
     return NULL;
 }
 
