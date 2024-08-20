@@ -1,26 +1,15 @@
-CC = clang -Wall
+CC = gcc
+CFLAGS = -Wall
+OBJ = aluno.o professor.o
+TARGET = main
 
-FLAGS = -lpthread.
+all: $(TARGET)
 
-LIBS = aluno.o professor.o
+$(TARGET): main.c $(OBJ)
+	$(CC) $(CFLAGS) main.c $(OBJ) -o $(TARGET)
 
-EXE = main
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-PROGS=$(EXE)
-
-all: $(PROGS)
-
-$(EXE):
-	$(CC) $(EXE).c $(LIBS) -o $(EXE)
-
-
-CFLAGS=-I.
-DEPS = aluno.h professor.h
-
-%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
-
-build: aluno.o professor.o
-
-clean: 
-	rm *.o $(PROGS)
+clean:
+	rm -f $(TARGET) $(OBJ)

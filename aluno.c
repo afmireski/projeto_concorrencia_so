@@ -7,17 +7,18 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
-
+#include <semaphore.h>
 #include "aluno.h"
 
-struct aluno
-{
-    int id;
-    int tipo_atividade;
-    bool concluiu_atividade;
-};
+// Variáveis de controle de grupo
+static int alunos_atv1_no_grupo = 0;
+static int alunos_atv2_no_grupo = 0;
+
+// Mutex para controlar o acesso às variáveis de grupo
+static pthread_mutex_t grupo_mutex = PTHREAD_MUTEX_INITIALIZER;
+// Semáforo para bloquear a entrada na sala até que um grupo válido seja formado
+static sem_t grupo_pronto;
 
 Aluno *cria_aluno(int id, int tipo_atividade)
 {
@@ -42,23 +43,37 @@ void aluno_terminar_atividade(Aluno *aluno)
 void aluno_aguardar_entrega(Aluno *aluno, sem_t *vagas_aluno_atv1, sem_t *vagas_aluno_atv2)
 {
     printf("alunoSO_%d_AT%d chega para entrega\n", aluno->id, aluno->tipo_atividade);
-    if (aluno->tipo_atividade == 1) // Verifica qual atividade vai ser entregue
+
+    pthread_mutex_lock(&grupo_mutex);
+
+    // Controle de formação de grupo
+    if (aluno->tipo_atividade == 1)
     {
-        sem_wait(vagas_aluno_atv1); // Espera a ter vagas no grupo para quer quer entregar a atividade 01
+        sem_wait(vagas_aluno_atv1); // Espera ter vagas no grupo da atividade 1
+        alunos_atv1_no_grupo++;
     }
     else
     {
-        sem_wait(vagas_aluno_atv2); // Espera a ter vagas no grupo para quer quer entregar a atividade 02
+        sem_wait(vagas_aluno_atv2); // Espera ter vagas no grupo da atividade 2
+        alunos_atv2_no_grupo++;
     }
+
+    // Se o grupo estiver completo, libera o acesso à sala
+    if (alunos_atv1_no_grupo == 2 && alunos_atv2_no_grupo == 1)
+    {
+        sem_post(&grupo_pronto);
+    }
+    pthread_mutex_unlock(&grupo_mutex);
+
+    // Aguarda até que o grupo esteja pronto
+    sem_wait(&grupo_pronto);
 }
 
 void aluno_entrar_sala(Aluno *aluno, sem_t *sala, int *vagas_sala)
 {
-    if (*vagas_sala == 0)
-        sem_wait(sala); // Espera liberar a sala
+    sem_wait(sala); // Garante exclusividade na entrada da sala
 
     *vagas_sala -= 1;
-
     printf("alunoSO_%d_AT%d entrou na sala\n", aluno->id, aluno->tipo_atividade);
     printf("Vagas restantes na sala: %d\n", *vagas_sala);
 }
@@ -67,25 +82,26 @@ void aluno_entregar_atividade(Aluno *aluno, sem_t* professor, sem_t *vagas_aluno
 {
     sem_post(professor); // Avisa o professor que tem tarefa para ser entregue
     printf("alunoSO_%d_AT%d entrega atividade %d\n", aluno->id, aluno->tipo_atividade, aluno->tipo_atividade);
-
-    if (aluno->tipo_atividade == 1)
-    {
-        sem_post(vagas_aluno_atv1); // Libera vaga no grupo da atividade 01
-    }
-    else
-    {
-        sem_post(vagas_aluno_atv2); // Libera vaga no grupo da  atividade 02
-    }
 }
 
 void aluno_sair_sala(Aluno *aluno, sem_t *sala, int *vagas_sala)
 {
     *vagas_sala += 1;
-    printf("Atividades restantes: %d/3\n", *vagas_sala);
-    if (*vagas_sala < 3)
-        sem_wait(sala); // Espera os outros entregarem;
-
-    sem_post(sala); // Libera a sala
-
     printf("alunoSO_%d_AT%d saiu da sala\n", aluno->id, aluno->tipo_atividade);
+
+    pthread_mutex_lock(&grupo_mutex);
+    if (aluno->tipo_atividade == 1)
+    {
+        alunos_atv1_no_grupo--;
+        sem_post(&grupo_pronto);
+    }
+    else
+    {
+        alunos_atv2_no_grupo--;
+        sem_post(&grupo_pronto);
+    }
+    pthread_mutex_unlock(&grupo_mutex);
+
+    sem_post(sala); // Libera a sala para o próximo grupo
 }
+
