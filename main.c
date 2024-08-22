@@ -1,6 +1,6 @@
 /**
  * Program: main.c
- * Autores: André Felipe Mireski, Alexandre Tolomeotti, Victor
+ * Autores: André Felipe Mireski, Alexandre Tolomeotti, Victor Ângelo
  * Data: 17/08/2024
  * Data de entrega: 22/08/2024
  */
@@ -16,21 +16,23 @@
 #include "professor.h"
 
 #define DEBUG false
-#define VAGAS_SALA 3
+#define VAGAS_SALA 3 // Quantidade de alunos que o grupo pode ter
+#define VAGAS_ATV1 2 // Quantidade de alunos que fizeram a atividade 1 no grupo
+#define VAGAS_ATV2 1 // Quantidade de alunos que fizeram a atividade 2 no grupo
 
 // Variáveis de controle
 
 int vagas_grupo = VAGAS_SALA;
 int n_entregas = 0; // variável que controla quantas atividades foram entregues
-int n_alunos = 0;
+int n_alunos = 0;   // Variável que controla quantos alunos existem
 
-sem_t entrar_grupo;    // Mutex que controla se um aluno pode entrar no grupo
-sem_t grupo_formado;   // Mutex que controla se o grupo foi formado
-sem_t grupo_desformado;   // Mutex que controla se o grupo foi desformado
-sem_t sair_grupo;      // Mutex que controla se um aluno pode sair do grupo
-sem_t professor;       // Semáforo que controla se o professor pode, ou não, receber tarefas
-sem_t vagas_aluno_at1; // Semáforo que controla número de alunos que quer entregar a atividade 1
-sem_t vagas_aluno_at2; // Semáforo que controla número de alunos que quer entregar a atividade 2
+sem_t entrar_grupo;     // Mutex que controla se um aluno pode entrar no grupo
+sem_t grupo_formado;    // Mutex que controla se o grupo foi formado
+sem_t grupo_desformado; // Mutex que controla se o grupo foi desformado
+sem_t sair_grupo;       // Mutex que controla se um aluno pode sair do grupo
+sem_t professor;        // Semáforo que controla se o professor pode, ou não, receber tarefas
+sem_t vagas_aluno_at1;  // Semáforo que controla número de alunos que quer entregar a atividade 1
+sem_t vagas_aluno_at2;  // Semáforo que controla número de alunos que quer entregar a atividade 2
 
 // -----------
 
@@ -52,15 +54,15 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    n_alunos = atoi(argv[1]);
+    n_alunos = atoi(argv[1]); // Obtém a quantidade de alunos via CLI
 
     /* Inicializa alguns semáforos */
     Aluno **alunos = monta_alunos();
-    sem_init(&entrar_grupo, 0, 1);  // Inicialmente, qualquer um pode entrar no grupo
-    sem_init(&grupo_formado, 0, 0); // Inicialmente, o grupo não está formado
-    sem_init(&grupo_desformado, 0, 0); // Inicialmente, o grupo não está formado
-    sem_init(&sair_grupo, 0, 1);    // Inicialmente, qualquer um pode sair do grupo
-    sem_init(&professor, 0, 0);     // O professor está no aguardo da primeira tarefa
+    sem_init(&entrar_grupo, 0, 1);     // Inicialmente, qualquer um pode entrar no grupo
+    sem_init(&grupo_formado, 0, 0);    // Inicialmente, o grupo não está formado
+    sem_init(&grupo_desformado, 0, 0); // Inicialmente, o grupo não está desformado
+    sem_init(&sair_grupo, 0, 1);       // Inicialmente, qualquer um pode sair do grupo
+    sem_init(&professor, 0, 0);        // O professor está no aguardo da primeira tarefa
     // --
 
     /* Declara as threads */
@@ -142,9 +144,11 @@ Aluno **monta_alunos()
     int n_atividade02 = n_alunos / 3;             // 1/3 Atividade 02
     int n_atividade01 = n_alunos - n_atividade02; // 2/3 Atividade 01
 
+#if DEBUG
     printf("Quantidade de alunos: %d\n", n_alunos);
     printf("Quantidade de atividade 01: %d\n", n_atividade01);
     printf("Quantidade de atividade 02: %d\n", n_atividade02);
+#endif
 
     int atividades = 1;
     for (int i = 0; i < n_alunos; i++, atividades++)
@@ -153,11 +157,8 @@ Aluno **monta_alunos()
         alunos[i] = aluno;
     }
 
-    int vagas_atv1 = 2;
-    int vagas_atv2 = 1;
-
-    sem_init(&vagas_aluno_at1, 0, vagas_atv1);
-    sem_init(&vagas_aluno_at2, 0, vagas_atv2);
+    sem_init(&vagas_aluno_at1, 0, VAGAS_ATV1); // Inicializa semáforo para controlar o total de vagas no grupo para a atividade 01
+    sem_init(&vagas_aluno_at2, 0, VAGAS_ATV2); // Inicializa semáforo para controlar o total de vagas no grupo para a atividade 02
 
 #if DEBUG
     printf("Montou alunos\n");

@@ -1,6 +1,6 @@
 /**
  * Program: professor.c
- * Autores: André Felipe Mireski, Alexandre Tolomeotti, Victor
+ * Autores: André Felipe Mireski, Alexandre Tolomeotti, Victor Ângelo
  * Data: 17/08/2024
  * Data de entrega: 22/08/2024
  */
@@ -18,7 +18,7 @@ void professor_receber_atividade(sem_t *professor, int *n_entregas)
 
     *n_entregas += 1;
 
-    printf("Professor recebeu %d atividades\n", *n_entregas);
+    printf("Professor recebeu atividade.\n");
 
     // Volta a esperar por uma entrega
 }
